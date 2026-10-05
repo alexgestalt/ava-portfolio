@@ -1,0 +1,540 @@
+{
+  "name": "AI Receptionist – Lead Qualification & Booking (demo)",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "lead-bot",
+        "responseMode": "responseNode",
+        "options": {
+          "allowedOrigins": "*"
+        }
+      },
+      "id": "616bc1e4-5e9b-4dd2-98d3-0fe33a185351",
+      "name": "Chat Webhook",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [
+        0,
+        300
+      ],
+      "webhookId": "2184172d-99de-4aba-b6d0-87be0e0f6728"
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "={{ $json.body.message }}",
+        "hasOutputParser": true,
+        "options": {
+          "systemMessage": "=You are Ava, the friendly virtual receptionist for {{BUSINESS_NAME}}.\nGoal: qualify the visitor as a lead and book an appointment, in as few messages as possible.\nCollect: full name, need (service), urgency (High / Medium / Low), contact (mobile or email), preferred slot.\nRules:\n- Ask ONE question at a time. Be warm, short (max 2 sentences), plain language.\n- If the visitor gives several details at once, capture them all and skip those questions.\n- Answer FAQs (hours, pricing ranges, insurance, location) ONLY from the business info below, then return to the next missing field.\n- Never invent prices, availability or medical advice. If unsure, offer a callback from staff.\n- Offer slots only from AVAILABLE_SLOTS. Confirm a summary before booking.\n- Pain, swelling, bleeding or 'today/asap' = High urgency.\nBusiness info: {{BUSINESS_FAQ}}\nAVAILABLE_SLOTS: {{ $json.body.availableSlots || 'Tomorrow 9:30 AM, Tomorrow 1:00 PM, Fri 2:00 PM' }}\nAlways respond in the structured JSON format."
+        }
+      },
+      "id": "f6643315-9076-419c-8d8a-3daacca73aa5",
+      "name": "AI Receptionist Agent",
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 1.7,
+      "position": [
+        260,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "model": {
+          "__rl": true,
+          "value": "gpt-4o-mini",
+          "mode": "list",
+          "cachedResultName": "gpt-4o-mini"
+        },
+        "options": {
+          "temperature": 0.3
+        }
+      },
+      "id": "84067ff0-a945-4f8b-aa7c-f46eaf9ab767",
+      "name": "OpenAI Chat Model",
+      "type": "@n8n/n8n-nodes-langchain.lmChatOpenAi",
+      "typeVersion": 1.2,
+      "position": [
+        140,
+        540
+      ],
+      "credentials": {
+        "openAiApi": {
+          "id": "REPLACE_ME",
+          "name": "OpenAI account (client's own key)"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "sessionIdType": "customKey",
+        "sessionKey": "={{ $('Chat Webhook').item.json.body.sessionId }}",
+        "contextWindowLength": 12
+      },
+      "id": "d6aa9466-bcdc-4053-bf03-6dab453c3b86",
+      "name": "Conversation Memory",
+      "type": "@n8n/n8n-nodes-langchain.memoryBufferWindow",
+      "typeVersion": 1.3,
+      "position": [
+        300,
+        540
+      ]
+    },
+    {
+      "parameters": {
+        "jsonSchemaExample": "{\n  \"reply\": \"Thanks Jamie! What's the best mobile number for your confirmation?\",\n  \"lead\": {\n    \"name\": \"Jamie Rivera\",\n    \"need\": \"Chipped / broken tooth\",\n    \"urgency\": \"High\",\n    \"contact\": \"+15550142288\",\n    \"contact_type\": \"phone\",\n    \"slot\": \"Tomorrow 9:30 AM\"\n  },\n  \"lead_complete\": false,\n  \"booking_confirmed\": false,\n  \"handoff_to_human\": false\n}"
+      },
+      "id": "a7d89e4c-e1b8-41e8-9663-e4326c2547fa",
+      "name": "Structured Output Parser",
+      "type": "@n8n/n8n-nodes-langchain.outputParserStructured",
+      "typeVersion": 1.2,
+      "position": [
+        460,
+        540
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Normalise the agent output and compute a simple lead score\nconst out = $input.first().json.output || {};\nconst lead = out.lead || {};\nconst body = $('Chat Webhook').first().json.body || {};\nlet score = 0;\nif (lead.need) score += 20;\nif (lead.name) score += 15;\nif (lead.contact) score += 20;\nif (lead.slot) score += 20;\nscore += ({ High: 25, Medium: 15, Low: 8 })[lead.urgency] || 0;\nreturn [{ json: {\n  sessionId: body.sessionId,\n  reply: out.reply,\n  booking_confirmed: !!out.booking_confirmed,\n  handoff_to_human: !!out.handoff_to_human,\n  ...lead,\n  lead_score: score,\n  source: body.source || 'website-chat',\n  captured_at: new Date().toISOString(),\n}}];"
+      },
+      "id": "411b6dc0-d0fc-4c20-b8e3-f69421857cfd",
+      "name": "Normalize & Score Lead",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        560,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "loose",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "60d0ccea-57da-43f6-a440-7cab81bb3c94",
+              "leftValue": "={{ $json.booking_confirmed }}",
+              "rightValue": true,
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "cb54755b-a86e-494f-a4e1-08aa72d08d1a",
+      "name": "Booked?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        800,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "calendar": {
+          "__rl": true,
+          "value": "REPLACE_WITH_CALENDAR_ID",
+          "mode": "id"
+        },
+        "start": "={{ $json.slot_start_iso || $now.plus(1,'day').set({hour:9,minute:30}).toISO() }}",
+        "end": "={{ $json.slot_end_iso || $now.plus(1,'day').set({hour:10,minute:0}).toISO() }}",
+        "additionalFields": {
+          "summary": "={{ $json.need }} – {{ $json.name }} ({{ $json.urgency }})",
+          "description": "=Booked by AI receptionist. Contact: {{ $json.contact }}. Lead score: {{ $json.lead_score }}"
+        }
+      },
+      "id": "81872859-1f99-41b6-ad73-9f8913bcaa4a",
+      "name": "Create Calendar Event",
+      "type": "n8n-nodes-base.googleCalendar",
+      "typeVersion": 1.3,
+      "position": [
+        1040,
+        160
+      ],
+      "credentials": {
+        "googleCalendarOAuth2Api": {
+          "id": "REPLACE_ME",
+          "name": "Google Calendar (client account)"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "append",
+        "documentId": {
+          "__rl": true,
+          "value": "REPLACE_WITH_SHEET_ID",
+          "mode": "id"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "Leads",
+          "mode": "name"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "Captured At": "={{ $('Normalize & Score Lead').item.json.captured_at }}",
+            "Name": "={{ $('Normalize & Score Lead').item.json.name }}",
+            "Need": "={{ $('Normalize & Score Lead').item.json.need }}",
+            "Urgency": "={{ $('Normalize & Score Lead').item.json.urgency }}",
+            "Contact": "={{ $('Normalize & Score Lead').item.json.contact }}",
+            "Slot": "={{ $('Normalize & Score Lead').item.json.slot }}",
+            "Lead Score": "={{ $('Normalize & Score Lead').item.json.lead_score }}",
+            "Source": "={{ $('Normalize & Score Lead').item.json.source }}"
+          },
+          "matchingColumns": [],
+          "schema": [
+            {
+              "id": "Captured At",
+              "displayName": "Captured At",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Name",
+              "displayName": "Name",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Need",
+              "displayName": "Need",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Urgency",
+              "displayName": "Urgency",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Contact",
+              "displayName": "Contact",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Slot",
+              "displayName": "Slot",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Lead Score",
+              "displayName": "Lead Score",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Source",
+              "displayName": "Source",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "175624dd-eb8a-4fa5-a072-396daf0be097",
+      "name": "Append Lead to Google Sheet",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.5,
+      "position": [
+        1260,
+        160
+      ],
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "REPLACE_ME",
+          "name": "Google Sheets (client account)"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "fromEmail": "bot@REPLACE-WITH-CLIENT-DOMAIN.com",
+        "toEmail": "frontdesk@REPLACE-WITH-CLIENT-DOMAIN.com",
+        "subject": "=New {{ $('Normalize & Score Lead').item.json.urgency }}-urgency booking: {{ $('Normalize & Score Lead').item.json.name }}",
+        "emailFormat": "text",
+        "text": "=New lead booked by the AI receptionist\n\nName: {{ $('Normalize & Score Lead').item.json.name }}\nNeed: {{ $('Normalize & Score Lead').item.json.need }}\nUrgency: {{ $('Normalize & Score Lead').item.json.urgency }}\nContact: {{ $('Normalize & Score Lead').item.json.contact }}\nSlot: {{ $('Normalize & Score Lead').item.json.slot }}\nLead score: {{ $('Normalize & Score Lead').item.json.lead_score }}",
+        "options": {}
+      },
+      "id": "a46e9abe-1bb8-45d3-91dc-75e1650f19f4",
+      "name": "Email Front Desk",
+      "type": "n8n-nodes-base.emailSend",
+      "typeVersion": 2.1,
+      "position": [
+        1500,
+        40
+      ],
+      "credentials": {
+        "smtp": {
+          "id": "REPLACE_ME",
+          "name": "SMTP (client mail server)"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "send",
+        "phoneNumberId": "REPLACE_WITH_PHONE_NUMBER_ID",
+        "recipientPhoneNumber": "REPLACE_WITH_OWNER_NUMBER",
+        "textBody": "=🦷 New booking: {{ $('Normalize & Score Lead').item.json.name }} – {{ $('Normalize & Score Lead').item.json.need }} ({{ $('Normalize & Score Lead').item.json.urgency }}) at {{ $('Normalize & Score Lead').item.json.slot }}",
+        "additionalFields": {}
+      },
+      "id": "cad89460-849a-4a9b-ba15-f3d08e0fe0c8",
+      "name": "WhatsApp Alert to Owner",
+      "type": "n8n-nodes-base.whatsApp",
+      "typeVersion": 1,
+      "position": [
+        1500,
+        200
+      ],
+      "credentials": {
+        "whatsAppApi": {
+          "id": "REPLACE_ME",
+          "name": "WhatsApp Business Cloud (client account)"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ { reply: $('Normalize & Score Lead').item.json.reply, booked: true, lead_score: $('Normalize & Score Lead').item.json.lead_score } }}",
+        "options": {}
+      },
+      "id": "c73d0581-0597-4630-9a7d-a45554e1bf68",
+      "name": "Reply: Booked",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [
+        1500,
+        360
+      ]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ { reply: $json.reply, booked: false } }}",
+        "options": {}
+      },
+      "id": "cd7f1345-11d8-404d-8e7e-bb4cc09caf92",
+      "name": "Reply: Continue Chat",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [
+        1040,
+        460
+      ]
+    },
+    {
+      "parameters": {
+        "content": "## AI Lead-Gen Receptionist (demo architecture)\nWebsite/WhatsApp chat → **Webhook** → **AI Agent** (LLM + memory + structured output) → if booked: **Calendar** → **Google Sheet / CRM** → **Email + WhatsApp alerts**.\n\nAll credentials are placeholders (REPLACE_ME). The client connects their own OpenAI, Google and WhatsApp accounts.",
+        "height": 220,
+        "width": 520
+      },
+      "id": "48ec64eb-f8ac-414a-b46a-9c46178c7990",
+      "name": "Sticky: Overview",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -40,
+        -60
+      ]
+    },
+    {
+      "parameters": {
+        "content": "### Swap the CRM\nReplace the Google Sheets node with HubSpot, Pipedrive, Airtable or an HTTP Request to a GoHighLevel/other CRM API. Same field mapping.",
+        "height": 180,
+        "width": 260
+      },
+      "id": "5cfb5514-83d0-40db-89bb-1e6f7be6037a",
+      "name": "Sticky: Swap CRM",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        1220,
+        -60
+      ]
+    },
+    {
+      "parameters": {
+        "content": "### Webhook payload\n```json\n{\"sessionId\":\"abc123\",\n \"message\":\"I chipped a tooth\",\n \"source\":\"website-chat\"}\n```",
+        "height": 200,
+        "width": 300
+      },
+      "id": "316ae142-b723-4910-b466-5dd2fd8f34c6",
+      "name": "Sticky: Payload",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -40,
+        480
+      ]
+    }
+  ],
+  "connections": {
+    "Chat Webhook": {
+      "main": [
+        [
+          {
+            "node": "AI Receptionist Agent",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "OpenAI Chat Model": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "AI Receptionist Agent",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Conversation Memory": {
+      "ai_memory": [
+        [
+          {
+            "node": "AI Receptionist Agent",
+            "type": "ai_memory",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Structured Output Parser": {
+      "ai_outputParser": [
+        [
+          {
+            "node": "AI Receptionist Agent",
+            "type": "ai_outputParser",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "AI Receptionist Agent": {
+      "main": [
+        [
+          {
+            "node": "Normalize & Score Lead",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Normalize & Score Lead": {
+      "main": [
+        [
+          {
+            "node": "Booked?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Booked?": {
+      "main": [
+        [
+          {
+            "node": "Create Calendar Event",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Reply: Continue Chat",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Create Calendar Event": {
+      "main": [
+        [
+          {
+            "node": "Append Lead to Google Sheet",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Append Lead to Google Sheet": {
+      "main": [
+        [
+          {
+            "node": "Email Front Desk",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "WhatsApp Alert to Owner",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Reply: Booked",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "pinData": {},
+  "meta": {
+    "templateCredsSetupCompleted": false
+  },
+  "tags": []
+}

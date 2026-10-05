@@ -1,0 +1,376 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Ava AI Receptionist Demo · Cedar &amp; Pine Dental (fictional) · Alex Gestalt</title>
+<meta name="description" content="Try Ava, a rule-based AI receptionist and lead-qualification chatbot demo for Cedar &amp; Pine Dental, a fictional business. Built by Alex Gestalt.">
+<meta name="robots" content="index,follow">
+<link rel="icon" href="../assets/favicon.ico" sizes="any">
+<link rel="icon" type="image/png" href="../assets/img/favicon-32.png">
+<link rel="apple-touch-icon" href="../assets/img/apple-touch-icon.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&amp;display=swap" rel="stylesheet">
+<style>
+:root{
+  --navy:#0B1B3A; --navy2:#13284F; --teal:#14B8A6; --teal2:#0E9F8E; --amber:#F59E0B;
+  --red:#EF4444; --green:#22C55E; --bg:#EEF2F8; --card:#FFFFFF; --ink:#0F172A; --muted:#64748B; --line:#E2E8F0;
+  --bot:#F1F5F9; --user:#0B1B3A; --userInk:#fff; --chatbg:#FFFFFF;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{height:100%}
+body{font-family:"Plus Jakarta Sans","Inter",system-ui,sans-serif;background:var(--bg);color:var(--ink);overflow:hidden}
+.topbar{height:56px;background:var(--navy);color:#fff;display:flex;align-items:center;justify-content:space-between;padding:0 28px}
+.brand{display:flex;align-items:center;gap:10px;font-weight:700;letter-spacing:.2px}
+.brand .logo{width:30px;height:30px;border-radius:9px;background:linear-gradient(135deg,var(--teal),#38BDF8);display:grid;place-items:center;font-size:16px}
+.brand small{font-weight:500;opacity:.65;margin-left:6px}
+.pill{font-size:12px;background:rgba(255,255,255,.12);padding:6px 12px;border-radius:99px;display:flex;gap:8px;align-items:center}
+.dot{width:8px;height:8px;border-radius:50%;background:var(--green);box-shadow:0 0 0 3px rgba(34,197,94,.25)}
+.wrap{display:grid;grid-template-columns:1.25fr 1fr;gap:22px;padding:20px 28px;height:calc(100% - 56px)}
+/* chat */
+.chat{background:var(--chatbg);border-radius:18px;box-shadow:0 10px 30px rgba(15,23,42,.08);display:flex;flex-direction:column;overflow:hidden;min-height:0}
+.chat-h{display:flex;align-items:center;gap:12px;padding:14px 18px;border-bottom:1px solid var(--line);background:#fff}
+.avatar{width:40px;height:40px;border-radius:50%;background:linear-gradient(135deg,var(--teal),#0EA5E9);display:grid;place-items:center;color:#fff;font-weight:800}
+.chat-h .t{font-weight:700}
+.chat-h .s{font-size:12px;color:var(--muted);display:flex;gap:6px;align-items:center}
+.chat-h .right{margin-left:auto;font-size:11px;color:var(--muted);text-align:right}
+.msgs{flex:1;overflow-y:auto;padding:18px;display:flex;flex-direction:column;gap:10px;scroll-behavior:smooth;min-height:0}
+.msg{max-width:78%;padding:11px 14px;border-radius:16px;line-height:1.45;font-size:14.5px;animation:pop .25s ease-out;white-space:pre-line}
+.msg.bot{background:var(--bot);border-bottom-left-radius:5px;align-self:flex-start}
+.msg.user{background:var(--user);color:var(--userInk);border-bottom-right-radius:5px;align-self:flex-end}
+.msg .meta{display:block;font-size:10.5px;opacity:.55;margin-top:4px}
+.msg.note{align-self:center;background:#ECFDF5;color:#065F46;font-size:12px;border-radius:99px;padding:6px 12px;max-width:none}
+@keyframes pop{from{opacity:0;transform:translateY(6px) scale(.98)}to{opacity:1;transform:none}}
+.typing{align-self:flex-start;background:var(--bot);border-radius:16px;padding:12px 14px;display:flex;gap:4px}
+.typing i{width:7px;height:7px;border-radius:50%;background:#94A3B8;animation:b 1s infinite}
+.typing i:nth-child(2){animation-delay:.15s}.typing i:nth-child(3){animation-delay:.3s}
+@keyframes b{0%,60%,100%{transform:none;opacity:.5}30%{transform:translateY(-4px);opacity:1}}
+.chips{display:flex;flex-wrap:wrap;gap:8px;padding:0 18px 10px}
+.chip{border:1.5px solid var(--teal);color:var(--teal2);background:#fff;border-radius:99px;padding:7px 13px;font:600 13px inherit;font-family:inherit;cursor:pointer;transition:.15s}
+.chip:hover,.chip.hot{background:var(--teal);color:#fff}
+.composer{display:flex;gap:10px;padding:12px 14px;border-top:1px solid var(--line);background:#fff}
+.composer input{flex:1;border:1.5px solid var(--line);border-radius:12px;padding:12px 14px;font:15px inherit;font-family:inherit;outline:none}
+.composer input:focus{border-color:var(--teal)}
+.composer button{background:var(--teal);color:#fff;border:0;border-radius:12px;padding:0 18px;font:700 14px inherit;font-family:inherit;cursor:pointer}
+.composer button:hover{background:var(--teal2)}
+/* side */
+.side{display:flex;flex-direction:column;gap:14px;min-height:0;overflow:hidden}
+.card{background:var(--card);border-radius:18px;box-shadow:0 10px 30px rgba(15,23,42,.08);padding:16px 18px}
+.card h3{font-size:12px;text-transform:uppercase;letter-spacing:1.2px;color:var(--muted);display:flex;justify-content:space-between;align-items:center;margin-bottom:10px}
+.field{display:grid;grid-template-columns:118px 1fr;align-items:center;padding:7px 0;border-bottom:1px dashed var(--line);font-size:14px}
+.field:last-child{border-bottom:0}
+.field .k{color:var(--muted);font-size:12.5px}
+.field .v{font-weight:600;min-height:20px;transition:.3s}
+.field .v.empty{color:#CBD5E1;font-weight:500}
+.field .v.flash{animation:flash 1s}
+@keyframes flash{0%{background:#CCFBF1}100%{background:transparent}}
+.badge{display:inline-block;font-size:12px;font-weight:700;padding:3px 10px;border-radius:99px}
+.b-high{background:#FEE2E2;color:#B91C1C}.b-med{background:#FEF3C7;color:#92400E}.b-low{background:#DCFCE7;color:#166534}
+.score{display:flex;align-items:center;gap:10px}
+.bar{flex:1;height:8px;background:var(--line);border-radius:99px;overflow:hidden}
+.bar span{display:block;height:100%;width:0;background:linear-gradient(90deg,var(--teal),var(--amber));transition:width .6s}
+.pipe{display:flex;gap:6px;align-items:center;font-size:11.5px;font-weight:600}
+.step{flex:1;text-align:center;padding:8px 4px;border-radius:10px;background:#F1F5F9;color:#94A3B8;transition:.3s;white-space:nowrap}
+.step.on{background:#CCFBF1;color:#0F766E}
+.step.ok{background:var(--teal);color:#fff}
+.arrow{color:#CBD5E1}
+.crm{display:none;border:2px solid var(--teal);animation:pop .4s ease-out}
+.crm.show{display:block}
+.crm .hd{display:flex;align-items:center;gap:10px;margin-bottom:8px}
+.crm .ic{width:34px;height:34px;border-radius:10px;background:var(--teal);color:#fff;display:grid;place-items:center;font-size:18px}
+.crm .hd b{font-size:15px}.crm .hd small{display:block;color:var(--muted);font-size:12px}
+table{width:100%;border-collapse:collapse;font-size:11.5px;margin-top:6px}
+th{background:#F8FAFC;color:var(--muted);font-weight:600;text-align:left;padding:5px 6px;border:1px solid var(--line)}
+td{padding:5px 6px;border:1px solid var(--line);font-weight:600}
+tr.new td{background:#F0FDFA}
+.toast{background:var(--navy);color:#fff;padding:12px 16px;border-radius:14px;font-size:13.5px;box-shadow:0 10px 30px rgba(0,0,0,.18);display:none;gap:10px;align-items:center;animation:pop .45s ease-out}
+.toast.show{display:flex}
+.toast.show ~ .foot{display:none}
+.foot{font-size:11px;color:var(--muted);text-align:center}
+/* WhatsApp-style skin (generic, no logos) */
+body.wa{--bot:#FFFFFF;--user:#D9FDD3;--userInk:#111B21;--chatbg:#EFEAE2}
+body.wa .chat-h{background:#075E54;color:#fff;border:0}
+body.wa .chat-h .s,body.wa .chat-h .right{color:rgba(255,255,255,.75)}
+body.wa .msgs{background-color:#EFEAE2;background-image:radial-gradient(rgba(0,0,0,.035) 1px,transparent 1px);background-size:14px 14px}
+body.wa .msg{box-shadow:0 1px .5px rgba(0,0,0,.13);border-radius:10px}
+body.wa .msg.bot{border-top-left-radius:2px;border-bottom-left-radius:10px}
+body.wa .msg.user{border-top-right-radius:2px;border-bottom-right-radius:10px}
+body.wa .chips{background:#EFEAE2;padding-top:4px}
+body.wa .chip{border-color:#25A366;color:#128C4B}
+body.wa .chip:hover,body.wa .chip.hot{background:#25A366;color:#fff}
+body.wa .composer{background:#F0F2F5}
+body.wa .composer input{border-radius:99px;border:0}
+body.wa .composer button{background:#25A366;border-radius:99px}
+body.wa .avatar{background:#25A366}
+body.wa .typing{background:#fff}
+/* portfolio banner + layout */
+body{display:flex;flex-direction:column}
+.ag-banner{flex:0 0 auto;min-height:34px;background:#14B8A6;color:#0B1B3A;display:flex;align-items:center;justify-content:center;gap:14px;flex-wrap:wrap;padding:6px 16px;font-size:13px;font-weight:600;text-align:center}
+.ag-banner a{color:#0B1B3A;font-weight:800;text-decoration:underline;text-underline-offset:3px}
+.ag-banner a:hover{color:#fff}
+.ag-banner a:focus-visible{outline:2px solid #0B1B3A;outline-offset:2px;border-radius:4px}
+.topbar{flex:0 0 auto}
+.wrap{flex:1 1 auto;height:auto;min-height:0}
+@media (max-width:900px){
+  html,body{height:auto}
+  body{overflow:auto;min-height:100%}
+  .topbar{padding:0 16px}
+  .brand small{display:none}
+  .pill{font-size:11px;padding:5px 10px}
+  .wrap{grid-template-columns:1fr;padding:14px;gap:14px}
+  .chat{height:74vh;min-height:460px}
+  .side{overflow:visible}
+  .pipe{flex-wrap:wrap}
+  .arrow{display:none}
+  .step{flex:1 1 30%}
+  .card{overflow-x:auto}
+}
+@media (max-width:560px){
+  .pill #modeLabel{display:none}
+  .pill::after{content:"Live demo"}
+  .msg{max-width:88%}
+  .chat-h .right{display:none}
+  .field{grid-template-columns:96px 1fr}
+}
+</style>
+</head>
+<body>
+<div class="ag-banner" role="note"><span>Demo for a fictional business, by Alex Gestalt</span><a href="../index.html">← Back to portfolio</a></div>
+<div class="topbar">
+  <div class="brand"><div class="logo">🦷</div>Cedar &amp; Pine Dental <small>fictional demo business</small></div>
+  <div class="pill"><span class="dot"></span><span id="modeLabel">Live demo · AI receptionist · rule-based, no API keys</span></div>
+</div>
+<div class="wrap">
+  <section class="chat">
+    <div class="chat-h">
+      <div class="avatar">A</div>
+      <div><div class="t">Ava · Virtual Receptionist</div><div class="s"><span class="dot"></span>Online · replies instantly, 24/7</div></div>
+      <div class="right">Website chat widget<br>Cedar &amp; Pine Dental</div>
+    </div>
+    <div class="msgs" id="msgs"></div>
+    <div class="chips" id="chips"></div>
+    <form class="composer" id="form" autocomplete="off">
+      <input id="inp" placeholder="Type a message…" aria-label="Message">
+      <button type="submit">Send</button>
+    </form>
+  </section>
+  <aside class="side">
+    <div class="card">
+      <h3>Lead record · live <span id="status" class="badge b-low" style="text-transform:none;letter-spacing:0">Collecting…</span></h3>
+      <div class="field"><span class="k">Name</span><span class="v empty" id="f-name">—</span></div>
+      <div class="field"><span class="k">Need</span><span class="v empty" id="f-need">—</span></div>
+      <div class="field"><span class="k">Urgency</span><span class="v empty" id="f-urg">—</span></div>
+      <div class="field"><span class="k">Contact</span><span class="v empty" id="f-contact">—</span></div>
+      <div class="field"><span class="k">Appointment</span><span class="v empty" id="f-slot">—</span></div>
+      <div class="field"><span class="k">Lead score</span><span class="v"><span class="score"><span class="bar"><span id="scorebar"></span></span><span id="scoretxt">0</span></span></span></div>
+    </div>
+    <div class="card">
+      <h3>Automation pipeline</h3>
+      <div class="pipe">
+        <div class="step" id="s1">Chat</div><span class="arrow">→</span>
+        <div class="step" id="s2">AI agent</div><span class="arrow">→</span>
+        <div class="step" id="s3">Calendar</div><span class="arrow">→</span>
+        <div class="step" id="s4">Sheet / CRM</div><span class="arrow">→</span>
+        <div class="step" id="s5">Notify</div>
+      </div>
+    </div>
+    <div class="card crm" id="crm">
+      <div class="hd"><div class="ic">✓</div><div><b>Lead captured &amp; synced</b><small id="crmsub">New row appended to “Leads” sheet · CRM contact created</small></div></div>
+      <table>
+        <thead><tr><th>Time</th><th>Name</th><th>Need</th><th>Urgency</th><th>Slot</th><th>Score</th></tr></thead>
+        <tbody>
+          <tr><td>09:12</td><td>M. Chen</td><td>Cleaning</td><td>Low</td><td>Thu 2:00 PM</td><td>62</td></tr>
+          <tr class="new" id="crmrow"></tr>
+        </tbody>
+      </table>
+    </div>
+    <div class="toast" id="toast">🔔 <span id="toastTxt">Front desk notified</span></div>
+    <div class="foot">Demo with sample data · production version connects to your calendar, Sheet/CRM and alerts</div>
+  </aside>
+</div>
+
+<script>
+(()=>{
+const P=new URLSearchParams(location.search);
+const SPEED=parseFloat(P.get('speed')||'1');
+if(P.get('theme')==='whatsapp'){document.body.classList.add('wa');
+  document.getElementById('modeLabel').textContent='Live demo · WhatsApp-style AI assistant · rule-based';
+  document.querySelector('.chat-h .right').innerHTML='Messaging chat<br>Cedar &amp; Pine Dental';}
+const $=id=>document.getElementById(id);
+const msgs=$('msgs'),chipsEl=$('chips'),inp=$('inp');
+const sleep=ms=>new Promise(r=>setTimeout(r,ms*SPEED));
+const lead={name:null,need:null,urgency:null,contact:null,contactType:null,slot:null};
+let state='need', busy=false, slots=[], pendingConfirm=false, done=false;
+window.__bot={get busy(){return busy},get done(){return done},lead};
+
+const now=()=>new Date().toLocaleTimeString([], {hour:'numeric',minute:'2-digit'});
+function scroll(){msgs.scrollTop=msgs.scrollHeight}
+function addMsg(text,who){const d=document.createElement('div');d.className='msg '+who;d.textContent=text;
+  if(who!=='note'){const m=document.createElement('span');m.className='meta';m.textContent=(who==='bot'?'Ava · ':'You · ')+now();d.appendChild(m);}
+  msgs.appendChild(d);scroll();return d}
+function setChips(list){chipsEl.innerHTML='';(list||[]).forEach(c=>{const b=document.createElement('button');b.type='button';b.className='chip';b.textContent=c;b.onclick=()=>handleUser(c);chipsEl.appendChild(b)})}
+async function say(text,extraDelay=0){busy=true;const t=document.createElement('div');t.className='typing';t.innerHTML='<i></i><i></i><i></i>';msgs.appendChild(t);scroll();
+  await sleep(Math.min(450+text.length*14,1500)+extraDelay);t.remove();addMsg(text,'bot');busy=false}
+function setField(id,html,raw){const el=$(id);if(el.dataset.v===html)return;el.dataset.v=html;el.classList.remove('empty');el.innerHTML=html;el.classList.remove('flash');void el.offsetWidth;el.classList.add('flash')}
+function step(n,cls){const el=$('s'+n);el.className='step '+cls}
+function score(){let s=0;if(lead.need)s+=20;if(lead.name)s+=15;if(lead.contact)s+=20;if(lead.slot)s+=20;
+  s+=lead.urgency==='High'?25:lead.urgency==='Medium'?15:lead.urgency==='Low'?8:0;
+  $('scorebar').style.width=s+'%';$('scoretxt').textContent=s;return s}
+function mask(c){if(lead.contactType==='email'){const [u,d]=c.split('@');return u.slice(0,2)+'•••@'+d}
+  const dg=c.replace(/\D/g,'');return '('+dg.slice(-10,-7)+') •••-••'+dg.slice(-2)}
+function refresh(){
+  if(lead.name)setField('f-name',lead.name);
+  if(lead.need)setField('f-need',lead.need);
+  if(lead.urgency){const c=lead.urgency==='High'?'b-high':lead.urgency==='Medium'?'b-med':'b-low';setField('f-urg',`<span class="badge ${c}">${lead.urgency}</span>`)}
+  if(lead.contact)setField('f-contact',(lead.contactType==='email'?'✉ ':'📱 ')+mask(lead.contact)+' <span style="color:#94A3B8;font-weight:500;font-size:11px">(masked)</span>');
+  if(lead.slot)setField('f-slot','📅 '+lead.slot.label);
+  score();
+}
+
+// ---------- NLU (keyword + pattern based) ----------
+const NEEDS=[
+  {re:/(chip|crack|broke|broken|knocked|lost a filling|filling fell|tooth fell)/i,label:'Chipped / broken tooth',urg:'High'},
+  {re:/(toothache|tooth ache|pain|hurts|hurting|sore|swell|swollen|abscess|bleed)/i,label:'Tooth pain',urg:'High'},
+  {re:/(clean|check ?up|checkup|exam|hygien|routine)/i,label:'Cleaning & check-up'},
+  {re:/(whiten|white teeth|bleach|stain)/i,label:'Teeth whitening'},
+  {re:/(implant|missing tooth|replace a tooth)/i,label:'Implant consultation'},
+  {re:/(aligner|brace|straighten|crooked|orthodont)/i,label:'Clear aligner consult'},
+  {re:/(kid|child|son|daughter|toddler)/i,label:"Children's visit"},
+  {re:/(new patient|first visit|register)/i,label:'New patient exam'},
+];
+function detectNeed(t){for(const n of NEEDS){if(n.re.test(t))return n}return null}
+function detectUrgency(t){
+  if(/(asap|emergency|urgent|today|right now|can'?t sleep|severe|really bad|unbearable|swell|bleed|pain|hurts|sore)/i.test(t))return 'High';
+  if(/(this week|soon|next few days|tomorrow|kind of|a bit|mild|annoying)/i.test(t))return 'Medium';
+  if(/(no rush|whenever|flexible|next month|not urgent|just looking|planning)/i.test(t))return 'Low';
+  return null}
+function detectName(t,force){
+  let m=t.match(/\b(?:my name is|my name's|i am|i'm|im|this is|it's|call me)\s+([a-z][a-z'\-]+(?:\s+[a-z][a-z'\-]+)?)/i);
+  const stop=/^(pretty|really|kind|kinda|been|getting|about|my|for|from|still|bad|worse|super|quite|too|all|no|yes|in|having|looking|not|a|an|the|so|very|just|calling|here|interested|wondering|new|good|fine|ok|okay|sore|hurting)$/i;
+  if(m){const w=m[1].split(/\s+/);if(stop.test(w[0]))m=null;else{if(w[1]&&stop.test(w[1]))w.pop();return cap(w.join(' '))}}
+  if(force&&!detectUrgency(t)&&!/(week|today|tomorrow|morning|afternoon|evening|asap|soon|appointment|tooth|teeth|help|what|how|when|why|where)/i.test(t)){const c=t.replace(/[^a-z'\-\s]/gi,'').trim();const w=c.split(/\s+/).filter(Boolean);
+    if(w.length>=1&&w.length<=3&&!/\d/.test(t)&&!/^(yes|no|ok|okay|sure|hi|hello|hey)$/i.test(c))return cap(w.slice(0,2).join(' '))}
+  return null}
+const cap=s=>s.replace(/\b\w/g,c=>c.toUpperCase());
+function detectContact(t){const e=t.match(/[\w.+-]+@[\w-]+\.[\w.]{2,}/);if(e)return{type:'email',v:e[0]};
+  const p=t.replace(/[^\d+]/g,'');if(p.replace(/\D/g,'').length>=10)return{type:'phone',v:p};return null}
+const FAQ=[
+  {re:/(insurance|ppo|coverage|covered|accept my plan)/i,a:"Good question! We accept most major PPO plans and offer an in-house savings plan if you're uninsured. The team will verify your coverage before your visit, so there are no surprises."},
+  {re:/(how much|cost|price|expensive|fee)/i,a:"Pricing depends on what the dentist finds, but an emergency exam starts at $89 and we always explain costs before any treatment."},
+  {re:/(hours|open|close|weekend|saturday|sunday)/i,a:"We're open Mon–Fri 8am–6pm and Saturdays 9am–1pm. I can book you any time, even when the office is closed."},
+  {re:/(where|address|location|parking|located)/i,a:"We're on Main Street, downtown, with free parking behind the building. You'll get directions in your confirmation."},
+  {re:/(human|real person|receptionist|talk to someone|speak to someone|call me back)/i,a:"Of course. I'll flag this for the front desk and they'll follow up personally. Meanwhile, I can still hold a time for you."},
+];
+function detectFaq(t){for(const f of FAQ)if(f.re.test(t))return f.a;return null}
+
+// ---------- slots ----------
+function buildSlots(){const base=new Date();const day=(o)=>{const d=new Date(base);d.setDate(d.getDate()+o);return d};
+  const fmt=d=>d.toLocaleDateString([], {weekday:'short'});
+  const u=lead.urgency;
+  const opts=u==='High'?[[0,'4:15 PM','Today'],[1,'9:30 AM','Tomorrow'],[1,'1:00 PM','Tomorrow']]
+    :u==='Medium'?[[1,'11:00 AM','Tomorrow'],[2,'3:30 PM'],[3,'10:00 AM']]
+    :[[3,'10:00 AM'],[5,'2:00 PM'],[7,'9:00 AM']];
+  slots=opts.map(([o,t,l])=>({label:(l||fmt(day(o)))+' '+t}));return slots}
+function pickSlot(t){const s=t.toLowerCase();
+  const n=s.match(/\b(1|2|3|first|second|third|last)\b/);const idx={1:0,2:1,3:2,first:0,second:1,third:2,last:2};
+  for(const sl of slots){if(s.includes(sl.label.toLowerCase()))return sl}
+  for(const sl of slots){const tm=sl.label.split(' ').slice(-2).join(' ').toLowerCase();if(s.includes(tm.replace(' ',''))||s.includes(tm)||s.includes(tm.split(':')[0]+(tm.includes('pm')?' pm':' am')))return sl}
+  if(/today/.test(s))return slots.find(x=>/Today/.test(x.label));
+  if(/tomorrow/.test(s)){const m=slots.filter(x=>/Tomorrow/.test(x.label));if(/(afternoon|pm|1)/.test(s))return m[m.length-1];return m[0]}
+  if(n)return slots[idx[n[1]]];
+  if(/(morning|am\b)/.test(s))return slots.find(x=>/AM/.test(x.label));
+  if(/(afternoon|pm\b)/.test(s))return slots.find(x=>/PM/.test(x.label));
+  return null}
+
+// ---------- dialogue ----------
+async function ask(){
+  if(done)return;
+  if(!lead.need){state='need';await say("What can we help you with today?");setChips(['Tooth pain','Chipped tooth','Cleaning & check-up','Whitening','Clear aligners']);return}
+  if(!lead.urgency){state='urgency';await say("How soon do you need to be seen?");setChips(['As soon as possible','This week','No rush']);return}
+  if(!lead.name){state='name';await say(lead.urgency==='High'?"Let's get you in quickly. What's your name?":"Great. Who am I booking for? Just your first and last name is perfect.");setChips([]);return}
+  if(!lead.contact){state='contact';await say(`Thanks, ${lead.name.split(' ')[0]}! What's the best mobile number or email for your confirmation?`);setChips([]);return}
+  if(!lead.slot){state='slot';buildSlots();
+    await say(lead.urgency==='High'?"I've found our earliest openings. These are held for urgent cases:":"Here are the next available times:");
+    setChips(slots.map(s=>s.label));step(3,'on');return}
+  if(!pendingConfirm){state='confirm';pendingConfirm=true;
+    await say(`Here's what I have:\n• ${lead.need}\n• ${lead.slot.label} with Dr. Patel\n• Confirmation to ${mask(lead.contact)}\n\nShall I lock it in?`);
+    setChips(['Yes, book it','Change time']);return}
+}
+async function handleUser(text){
+  text=(text||'').trim();if(!text||busy||done)return;
+  setChips([]);addMsg(text,'user');inp.value='';
+  step(1,'ok');step(2,'on');
+  const faq=detectFaq(text);
+  // opportunistic slot filling (people say several things at once)
+  const before=JSON.stringify(lead);
+  if(state==='confirm'){
+    if(/(yes|yep|sure|book|confirm|lock|perfect|sounds good|ok)/i.test(text)){await finish();return}
+    if(/(change|different|another|no)/i.test(text)){lead.slot=null;pendingConfirm=false;$('f-slot').className='v empty';$('f-slot').textContent='—';delete $('f-slot').dataset.v;score();await say("No problem, let's find a better time.");await ask();return}
+  }
+  if(state==='slot'){const s=pickSlot(text);if(s){lead.slot=s;refresh();step(3,'ok');await say(`${s.label} is yours (held for 10 minutes).`);await ask();return}}
+  const n=detectNeed(text);if(n&&!lead.need){lead.need=n.label;if(n.urg&&!lead.urgency&&detectUrgency(text))lead.urgency=detectUrgency(text)}
+  const u=detectUrgency(text);if(u&&(!lead.urgency||state==='urgency'))lead.urgency=u;
+  if(state==='urgency'&&!lead.urgency&&/(possible|soon)/i.test(text))lead.urgency='High';
+  const explicit=detectName(text,false);const nm=explicit||detectName(text,state==='name'&&!faq);if(nm&&(!lead.name||explicit))lead.name=nm;
+  const c=detectContact(text);if(c&&!lead.contact){lead.contact=c.v;lead.contactType=c.type}
+  refresh();
+  const changed=before!==JSON.stringify(lead);
+  if(faq){await say(faq);await ask();return}
+  if(!changed&&/^(hi|hello|hey|hiya|good (morning|afternoon|evening))\b/i.test(text)&&state==='need'){await say("Hello! 😊 Happy to help.");await ask();return}
+  if(!changed){
+    if(state==='contact'){await say("Hmm, that doesn't look like a full phone number or email. Could you double-check it?");return}
+    if(state==='slot'){await say("Just tap one of the times below, or tell me something like 'tomorrow morning'.");setChips(slots.map(s=>s.label));return}
+    if(state==='need'){await say("I want to make sure I book the right kind of visit. Which of these is closest?");setChips(['Tooth pain','Chipped tooth','Cleaning & check-up','Whitening','Something else']);return}
+    if(state==='name'){await say("Sorry, I didn't catch your name. What should I call you?");return}
+  }
+  // empathetic acknowledgements
+  if(n&&state==='need'){
+    if(n.urg==='High')await say(`Oh no, I'm sorry about your tooth! ${lead.urgency==='High'?"Since it's sore, I'll treat this as urgent so we can see you quickly.":"We can definitely take a look."}`);
+    else await say(`Lovely, ${lead.need.replace(/^Cleaning/,'a cleaning').replace(/^Implant/,'an implant').replace(/^Clear/,'a clear').replace(/^New/,'a new').replace(/^Children's/,'a children\'s').replace(/^Teeth/,'teeth')} it is.`.replace(/(it is\.)/,'$1').replace('Lovely, a cleaning & Check-up','Lovely, a cleaning & check-up'));
+  }
+  await ask();
+}
+async function finish(){
+  done=false;busy=true;
+  await say(`You're booked! ✅\nWe'll text a confirmation and a reminder the day before. ${lead.urgency==='High'?"If things get worse before then, reply here and we'll call you right away.":"Need to reschedule? Just reply here any time."}`);
+  done=true;busy=true;
+  $('status').className='badge b-high';$('status').textContent='Booked · Hot lead';
+  step(2,'ok');step(3,'ok');await sleep(400);step(4,'on');
+  addMsg('Conversation summary sent to the clinic','note');
+  await sleep(700);
+  const s=score();step(4,'ok');
+  const t=new Date().toLocaleTimeString([], {hour:'2-digit',minute:'2-digit',hour12:false});
+  $('crmrow').innerHTML=`<td>${t}</td><td>${lead.name}</td><td>${lead.need.replace(' consultation','').replace(' & check-up','')}</td><td>${lead.urgency}</td><td>${lead.slot.label.replace('Tomorrow','Tmrw')}</td><td>${s}</td>`;
+  $('crm').classList.add('show');
+  await sleep(700);step(5,'ok');
+  $('toastTxt').textContent=`Front desk alerted: ${lead.urgency.toLowerCase()}-urgency ${lead.need.toLowerCase()}, ${lead.name}`;
+  $('toast').classList.add('show');
+  busy=false;window.__bot.finished=true;
+}
+$('form').addEventListener('submit',e=>{e.preventDefault();handleUser(inp.value)});
+
+// ---------- autoplay (for recording) ----------
+async function typeAndSend(text){while(busy)await sleep(80);await sleep(1500);
+  for(const ch of text){inp.value+=ch;await sleep(38+Math.random()*30)}await sleep(300);handleUser(inp.value);await sleep(200);while(busy)await sleep(80)}
+async function tapChip(match){while(busy)await sleep(80);await sleep(1600);
+  const b=[...chipsEl.querySelectorAll('.chip')].find(x=>x.textContent.includes(match))||chipsEl.querySelector('.chip');
+  if(b){b.classList.add('hot');await sleep(450);b.click()}await sleep(200);while(busy)await sleep(80)}
+async function autoplay(){
+  await typeAndSend("Hi! I chipped a tooth last night and it's pretty sore");
+  await typeAndSend("Do you take my insurance?");
+  await typeAndSend("I'm Jamie Rivera");
+  await typeAndSend("555-014-2288");
+  await tapChip('Tomorrow 9:30');
+  await tapChip('Yes, book it');
+}
+(async()=>{
+  await sleep(300);
+  await say("Hi there 👋 I'm Ava, the virtual receptionist for Cedar & Pine Dental. I can answer questions and book your visit in about a minute.");
+  await ask();
+  if(P.get('autoplay')==='1')autoplay();
+})();
+})();
+</script>
+</body>
+</html>
