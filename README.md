@@ -6,6 +6,10 @@ Portfolio site for **Alex Gestalt, chatbot & automation developer** (New York, U
 
 - **Live demo:** `demo/`: *Ava*, an AI receptionist and lead-qualification chatbot for **Cedar & Pine Dental, a fictional business** made up for this demo
 - **Contact:** gestaltworks@gmail.com · [fiverr.com/alex_gestalt](https://www.fiverr.com/alex_gestalt)
+- **Fiverr gigs:**
+  - [n8n AI chatbot](https://www.fiverr.com/alex_gestalt/build-an-n8n-ai-chatbot-that-qualifies-leads-and-books-appointments)
+  - [WhatsApp AI bot](https://www.fiverr.com/alex_gestalt/build-a-whatsapp-ai-bot-that-answers-leads-and-books-appointments-24x7)
+  - [GoHighLevel AI chatbot](https://www.fiverr.com/alex_gestalt/set-up-a-gohighlevel-ai-chatbot-that-qualifies-and-books-your-leads)
 
 ## Featured project: Ava, AI receptionist & lead-gen bot
 
